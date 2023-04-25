@@ -7,12 +7,21 @@ import com.shpp.cs.a.graphics.WindowProgram;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 
+/**
+ * !!!! INSTRUCTIONS FOR USE !!!!!!
+ * 1. ! The game starts when you click on the racket. After that, the racket will follow your cursor within the window !
+ * 2. Vertical && Horizontal ball velocity == ( ball speed ). Values are set to optimal for the game VX = 4;
+ * VY = 5; Of course, you can change them, and they can change. But the author does not bear records for glitches.
+ * Remember, this is an SDK, it's hard for him, he's not Unreal Engine 5!!!
+ */
+
 public class Breakout extends WindowProgram {
+
     // APPLICATION_WIDTH - The width of the application window in pixels, set to 400.
-    public static final double APPLICATION_WIDTH = 400;
+    public static final int APPLICATION_WIDTH = 600;
 
     // APPLICATION_HEIGHT - The height of the application window in pixels, set to 600.
-    public static final double APPLICATION_HEIGHT = 600;
+    public static final int APPLICATION_HEIGHT = 800;
 
     // PADDLE_WIDTH - The width of the paddle in pixels, set to 60.
     private static final double PADDLE_WIDTH = 60;
@@ -23,11 +32,13 @@ public class Breakout extends WindowProgram {
     // PADDLE_Y_OFFSET - The vertical offset of the paddle from the bottom of the window in pixels, set to 30.
     private static final double PADDLE_Y_OFFSET = 30;
 
-    // N_BRICKS_PER_ROW - The number of bricks per row, set to 10.
-    private static final double N_BRICKS_PER_ROW = 10;
+    // N_BRICKS_PER_ROW - The number of bricks per row, set it.
+    private static final double NBRICKS_PER_ROW = 10;
 
-    // N_BRICK_ROWS - The number of brick rows, set to 10.
-    private static final double N_BRICK_ROWS = 10;
+    // N_BRICK_ROWS - The number of brick rows, set it.
+    private static final double NBRICK_ROWS = 10;
+
+    private static double AMOUNT_OF_BRICKS = NBRICKS_PER_ROW * NBRICK_ROWS;
 
     // BRICK_SEP - The separation between bricks in pixels, set to 4.
     private static final double BRICK_SEP = 4;
@@ -40,29 +51,40 @@ public class Breakout extends WindowProgram {
 
     // BRICK_Y_OFFSET - The vertical offset of the bricks from the top of the window in pixels,
     // calculated as the sum of BRICK_SEP and BRICK_HEIGHT.
-    private static final double BRICK_Y_OFFSET = BRICK_SEP + BRICK_HEIGHT;
+    private static final double BRICK_Y_OFFSET = 15;
 
     // AMOUNT_OF_GAMES - The total amount of games to be played, set to 3.
-    private static double AMOUNT_OF_GAMES = 3;
+    private static double NTURNS = 3;
 
     // Side wall width
-    private static final double WALL_WIDTH = (int) (APPLICATION_WIDTH * 0.02);
+    private static final double WALL_WIDTH = (int) (APPLICATION_WIDTH * 0.01);
 
     // PAUSE_TIME - The time delay in milliseconds for the game pause, calculated as 1000.0 divided by 100.
-    private static final double PAUSE_TIME = 1000.0 / 100;
+    private static final double PAUSE_TIME = 10;
 
-    // vx - The horizontal velocity of the ball, set to 5.
-    private double vx = 6;
+    // vx - The horizontal velocity of the ball, set to 3.
+    private double VX = 4;
 
     // vy - The vertical velocity of the ball, set to 4.
-    private double vy = 5;
+    private double VY = 5;
     // BALL - The graphical object representing the ball in the game.
     private static GOval BALL;
 
     // PADDLE - The graphical object representing the paddle in the game.
     private static GRect PADDLE;
-    private int TOTAL_BRICKS; // total number of bricks
-    private int DESTROYED_BRICKS; // number of destroyed bricks
+
+    // TOP_WALL - The graphical object representing the top wall in the game.
+    private static GRect TOP_WALL;
+
+    // LEFT_WALL - The graphical object representing the left wall in the game.
+    private static GRect LEFT_WALL;
+
+    // RIGHT_WALL - The graphical object representing the right wall in the game.
+    private static GRect RIGHT_WALL;
+
+    // BOTTOM_WALL - The graphical object representing the bottom wall in the game.
+    private static GRect BOTTOM_WALL;
+
 
     /**
      * The main game loop that runs the game.
@@ -70,17 +92,23 @@ public class Breakout extends WindowProgram {
      * Handles ball movement, collision detection, and game over condition.
      */
     public void run() {
-        // Set the size of the game window
-        setSize(((int) APPLICATION_WIDTH), (int) APPLICATION_HEIGHT);
+        // Set window size
+        setSize(APPLICATION_WIDTH, APPLICATION_HEIGHT);
 
         // Create top wall using oneWall() method
-        GRect topWall = oneWall(0, getWidth(), BRICK_SEP);
+        TOP_WALL = oneWall(0, 0, getWidth(), WALL_WIDTH);
+
         // Create left wall using oneWall() method
-        GRect leftWall = oneWall(0, BRICK_SEP, getHeight());
+        LEFT_WALL = oneWall(0, 0, WALL_WIDTH, getHeight());
+
         // Create right wall using oneWall() method
-        GRect rightWall = oneWall(getWidth() - BRICK_SEP, BRICK_SEP, getHeight());
-        // Create paddle using rocket() method
-        GRect paddle = rocket();
+        RIGHT_WALL = oneWall(getWidth() - WALL_WIDTH, 0, WALL_WIDTH, getHeight());
+
+        // Create bottom wall using oneWall() method
+        BOTTOM_WALL = oneWall(0, getHeight() - WALL_WIDTH, getWidth(), WALL_WIDTH);
+
+        // Create PADDLE
+        PADDLE = rocket();
 
         // Create matrix of bricks using matrix() method
         matrix();
@@ -90,11 +118,8 @@ public class Breakout extends WindowProgram {
         // Create ball using ballCreate() method
         ballCreate();
 
-        // Initialize game field and bricks
-        init();
-
         // Main game loop
-        while (AMOUNT_OF_GAMES > 0) {
+        while (NTURNS > 0) {
             // Move the ball
             moveBall();
             // Check for collision with walls, paddle, and bricks
@@ -102,11 +127,11 @@ public class Breakout extends WindowProgram {
             // Pause for a short period of time
             pause(PAUSE_TIME);
             // Check if the ball reaches the bottom of the window
-            if (BALL.getY() + BALL.getHeight() >= getHeight()) {
+            if (BALL.getY() + BALL.getHeight() >= PADDLE.getY() + PADDLE_HEIGHT) {
                 // Decrease amount of games remaining
-                AMOUNT_OF_GAMES--;
+                NTURNS--;
                 // If there are still games remaining
-                if (AMOUNT_OF_GAMES > 0) {
+                if (NTURNS > 0) {
                     // Remove the ball from the canvas
                     remove(BALL);
                     // Create a new ball
@@ -117,21 +142,17 @@ public class Breakout extends WindowProgram {
     }
 
     // private GObject selectedObject - The currently selected graphical object, initialized as null.
-    private GObject selectedObject;
+    private GObject selectedObject = null;
 
     // @Override - Indicates that the following methods are overriding methods from a superclass or an interface.
     @Override
+
     // This method is called when the mouse is pressed (clicked) by the user. It is responsible for updating the
     // selectedObject and isObjectSelected variables based on the mouse event.
     public void mousePressed(MouseEvent e) {
+
         // selectedObject is set to the graphical object located at the x and y coordinates of the mouse event.
         selectedObject = getElementAt(e.getX(), e.getY());
-        // If selectedObject is not null, it means an object has been clicked by the mouse,
-        // so isObjectSelected is set to true to indicate that an object is currently selected.
-        if (selectedObject != null) {
-            // private boolean isObjectSelected - A boolean flag indicating whether an object is currently selected or not,
-            // initialized as false. This variable will be used to keep track of the selection status.
-        }
     }
 
     // This method is called when the mouse is moved by the user. It is responsible for updating the position of the
@@ -164,14 +185,14 @@ public class Breakout extends WindowProgram {
         // width without side walls
         double widthWithoutLateralWalls = getWidth() - (WALL_WIDTH * 2);
         // padding size
-        double paddingSize = (N_BRICK_ROWS * BRICK_SEP) - BRICK_SEP;
+        double paddingSize = (NBRICKS_PER_ROW * BRICK_SEP) + BRICK_SEP;
         // size allotted for bricks
         double sizeAllottedForBricks = widthWithoutLateralWalls - paddingSize;
         // size of one brick
-        return sizeAllottedForBricks / N_BRICK_ROWS;
+        return sizeAllottedForBricks / NBRICKS_PER_ROW;
     }
 
-    private void brickCreate(int x, int y, int numberOfIterations) {
+    private void brickCreate(double x, double y, double numberOfIterations) {
 
         GRect realBrick = new GRect(
                 x,
@@ -202,64 +223,55 @@ public class Breakout extends WindowProgram {
     private void matrix() {
         // Initialize starting x and y coordinates for the bricks.
         double startX = BRICK_SEP + WALL_WIDTH;
-        double startY = (int) (getHeight() * 0.1);
+        double startY = getHeight() * 0.1;
 
         // Loop through each row of bricks.
-        for (int i = 0; i < N_BRICK_ROWS; i++) {
+        for (int i = 0; i < NBRICK_ROWS; i++) {
             // Loop through each brick in the current row.
-            for (int j = 0; j < N_BRICKS_PER_ROW; j++) {
-                // Adjust the starting x coordinate for the first brick in the first row.
-                if ((j == 0) && (i == 0)) {
-                    // Update the x coordinate for the next brick in the current row.
-                    startX = startX - BRICK_SEP;
-                }
+            for (int j = 0; j < NBRICKS_PER_ROW; j++) {
                 // Create a brick at the current x and y coordinates.
-                brickCreate((int) startX, (int) startY, i);
+                brickCreate(startX, startY, i);
                 // Update the x coordinate for the next brick in the current row.
                 startX += BRICK_SEP + oneBrickWidth();
             }
             // Update the y coordinate for the next row of bricks, and reset the x coordinate.
             startY += BRICK_Y_OFFSET;
-            startX = BRICK_SEP * 2;
+            startX = WALL_WIDTH + BRICK_SEP;
         }
     }
 
-    // A function that initializes the playing field and creates bricks
-    public void init() {
-        TOTAL_BRICKS = (int) (N_BRICK_ROWS * N_BRICKS_PER_ROW); // total number of bricks
-        DESTROYED_BRICKS = 0; // initially the number of destroyed bricks is 0
-    }
-
-    // A function that increases the counter of destroyed bricks
-    private void brickDestroyed() {
-        DESTROYED_BRICKS++; // increase the counter of destroyed bricks by 1
-    }
-
-    // Method rocket() creates and configures a GRect object representing a paddle in a game. It sets the paddle's
-    // position, size, fill color, and border color. Finally, it adds the paddle to the canvas. The method returns null
-    // as it does not have a meaningful return value.
     private GRect rocket() {
+
         // Create a new GRect object representing the paddle.
-        PADDLE = new GRect
+        GRect paddle = new GRect
+
                 (       // Set x coordinate of the paddle based on center of the window
                         (double) (getWidth() / 2) - (PADDLE_WIDTH / 2),
+
                         // Set y coordinate of the paddle based on the height of the window and an offset
                         getHeight() - PADDLE_Y_OFFSET,
+
                         // Set the width of the paddle
                         PADDLE_WIDTH,
+
                         // Set the height of the paddle
                         PADDLE_HEIGHT
                 );
+
         // Set the paddle to be filled with color
-        PADDLE.setFilled(true);
+        paddle.setFilled(true);
+
         // Set the fill color of the paddle to black
-        PADDLE.setFillColor(Color.BLACK);
+        paddle.setFillColor(Color.BLACK);
+
         // Set the border color of the paddle to black
-        PADDLE.setColor(Color.BLACK);
+        paddle.setColor(Color.BLACK);
+
         // Add the paddle to the canvas
-        add(PADDLE);
+        add(paddle);
+
         // Return null as the function does not return any meaningful value
-        return null;
+        return paddle;
     }
 
     /**
@@ -270,32 +282,41 @@ public class Breakout extends WindowProgram {
      * @param height the height of the wall
      * @return a GRect object representing the created wall
      */
-    private GRect oneWall(double x, double width, double height) {
+    private GRect oneWall(double x, double y, double width, double height) {
+
         // Create a new GRect object representing the wall.
-        GRect wall = new GRect(x, 0, width, height);
+        GRect wall = new GRect(x, y, width, height);
+
         // Set the fill flag of the wall to true
         wall.setFilled(true);
+
         // Set the fill color of the wall to black
         wall.setFillColor(Color.BLACK);
+
         // Set the border color of the wall to black
         wall.setColor(Color.BLACK);
+
         // Add the wall to the canvas
         add(wall);
+
         // Return the GRect object representing the created wall
         return wall;
     }
 
     /**
      * Checks for collision between the ball and other objects on the canvas, and returns the colliding object if any.
+     *
      * @return a GObject object representing the colliding object, or null if no collision occurred
      */
     private GObject getCollidingObject() {
+
         // Get the current x and y coordinates of the ball
         double x = BALL.getX();
         double y = BALL.getY();
 
         // Check for collision at the current x and y coordinates
         GObject obj = getElementAt(x, y);
+
         if (obj != null) {
             // Return the colliding object if found
             return obj;
@@ -303,6 +324,7 @@ public class Breakout extends WindowProgram {
 
         // Check for collision at the x and y coordinates shifted by the diameter of the ball to the right
         obj = getElementAt(x + 2 * BALL_RADIUS, y);
+
         if (obj != null) {
             // Return the colliding object if found
             return obj;
@@ -310,22 +332,25 @@ public class Breakout extends WindowProgram {
 
         // Check for collision at the x and y coordinates shifted by the diameter of the ball to the bottom-right
         obj = getElementAt(x + 2 * BALL_RADIUS, y + 2 * BALL_RADIUS);
+
         if (obj != null) {
+
             // Return the colliding object if found
             return obj;
         }
 
         // Check for collision at the x and y coordinates shifted by the diameter of the ball to the bottom
         obj = getElementAt(x, y + 2 * BALL_RADIUS);
+
         // Return the colliding object if found
         return obj;
-        // Return null if no collision occurred
     }
 
     /**
      * Creates a ball on the canvas.
      */
     private void ballCreate() {
+
         // Create a new GOval object representing the ball with a diameter of BALL_RADIUS * 2
         BALL = new GOval(BALL_RADIUS * 2, BALL_RADIUS * 2);
 
@@ -333,65 +358,101 @@ public class Breakout extends WindowProgram {
         BALL.setFilled(true);
 
         // Add the ball to the canvas, centered horizontally and vertically
-        add(BALL, (double) getWidth() / 2 - BALL.getWidth() / 2, (double) getHeight() / 2 - BALL.getHeight() / 2);
+        add
+                (
+                        BALL,
+                        (double) getWidth() / 2 - BALL.getWidth() / 2,
+                        (double) getHeight() / 2 - BALL.getHeight() / 2
+                );
 
         // Generate a random velocity for the ball using RandomGenerator
         RandomGenerator generator = RandomGenerator.getInstance();
-        vx = generator.nextDouble(1.0, 3.0);
+        VX = generator.nextDouble(1, 3);
 
         // Randomly set the ball's x-velocity to be positive or negative
         if (generator.nextBoolean(0.5)) {
-            vx = -vx;
+            VX = -VX;
         }
     }
 
 
     /**
      * Moves the ball on the canvas based on its current velocity and handles collisions with walls, bricks, and paddle.
+     *
+     * @return
      */
-    private void moveBall() {
-        // Check if the ball hits the left or right wall, reverse x-velocity if it does
-        if (BALL.getX() <= BRICK_SEP + (WALL_WIDTH / 1.2)
-                || BALL.getX() + BALL.getWidth() >= getWidth() - (WALL_WIDTH / 1.2)) {
-            vx = -vx;
-        }
+    private double moveBall() {
 
-        // Check if the ball hits the top wall, reverse y-velocity if it does
-        if (BALL.getY() <= WALL_WIDTH + 0.5) {
-            vy = -vy;
-        }
+        if (selectedObject != null) {
 
-        // Check for collisions with objects on the canvas
-        GObject collider = getCollidingObject();
+            // Check if the ball hits the left or right wall, reverse x-velocity if it does
+            // Such parameters like 1.2; 1,5; 0,5 - These are the offsets that are needed, because the program draws as
+            // it wants every time. These parameters are needed so that the ball does not actually hit the walls and
+            // they do not disappear.
+            if (BALL.getX() <= BRICK_SEP + (WALL_WIDTH / 1.2)
+                    || BALL.getX() + BALL.getWidth() >= getWidth() - WALL_WIDTH * 1.5) {
+                VX = -VX;
+            }
 
-        // If there is a collision
-        if (collider != null) {
-            // If the collider is not the paddle, remove it and reverse y-velocity
-            if (collider != PADDLE) {
-                remove(collider);
-                vy = -vy;
-            } else {
-                // If the collider is the paddle, reverse y-velocity with the absolute value
-                vy = -Math.abs(vy);
+            // Check if the ball hits the top wall, reverse y-velocity if it does
+            if (BALL.getY() <= WALL_WIDTH + 0.5) {
+                VY = -VY;
+            }
+
+            // Check for collisions with objects on the canvas
+            GObject collider = getCollidingObject();
+
+            // If there is a collision
+            if (collider != null) {
+
+                // If the collider is not the paddle, or wall, remove it and reverse y-velocity
+                if (collider != PADDLE) {
+                    remove(collider);
+                    AMOUNT_OF_BRICKS--;
+                    VY = -VY;
+
+                    /* The -Math.abs(VY) in the code is used to reverse the direction of the ball's vertical velocity
+                     (VY) when it collides with the paddle.In the code, it's mentioned that if the collider is the
+                     paddle, then the vertical velocity (VY) of the ball should be reversed with the absolute value.
+                     By using -Math.abs(VY), it ensures that the direction of the velocity is reversed, but the
+                     magnitude of the velocity remains unchanged. This means that if the ball is moving upwards
+                     (with a negative VY value), it will continue to move upwards after the collision with the paddle,
+                     but if it's moving downwards (with a positive VY value), it will continue to move downwards after
+                     the collision. This is typically done to simulate a realistic bounce effect when the ball collides
+                     with the paddle, where the ball retains its original speed but changes direction.
+                     */
+                } else {
+                    // If the collider is the paddle, reverse y-velocity with the absolute value
+                    VY = -Math.abs(VY);
+                }
+            }
+
+            // Move the ball based on its current velocity
+            BALL.move(VX, VY);
+
+            // Condition to END THE GAME if all the bricks are gone
+            if (AMOUNT_OF_BRICKS == 0) {
+                NTURNS = 0;
+                return NTURNS;
             }
         }
-
-        // Move the ball based on its current velocity
-        BALL.move(vx, vy);
+        return 0;
     }
 
     /**
      * Checks for collisions of the ball with objects on the canvas, and updates velocity accordingly.
      */
     private void checkForCollision() {
+
         // Get the collider object
         GObject collider = getCollidingObject();
 
         // If there is a collision
         if (collider != null) {
+
             // If the collider is the paddle, reverse y-velocity with the absolute value
             if (collider == PADDLE) {
-                vy = -Math.abs(vy);
+                VY = -Math.abs(VY);
             }
         }
     }
